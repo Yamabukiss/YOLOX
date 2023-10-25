@@ -12,15 +12,28 @@ from yolox.exp import Exp as MyExp
 class Exp(MyExp):
     def __init__(self):
         super(Exp, self).__init__()
+        self.num_classes = 2
         self.depth = 0.33
         self.width = 0.25
         self.input_size = (416, 416)
         self.random_size = (10, 20)
-        self.mosaic_scale = (0.5, 1.5)
+        self.mosaic_scale = (0.8, 1.2)
         self.test_size = (416, 416)
-        self.mosaic_prob = 0.5
+        self.mosaic_prob = 0.3
         self.enable_mixup = False
         self.exp_name = os.path.split(os.path.realpath(__file__))[1].split(".")[0]
+
+        self.warmup_epochs = 3
+        self.max_epoch = 100
+        self.warmup_lr = 0
+        self.basic_lr_per_img = 0.01 / 64.0
+        self.scheduler = "yoloxwarmcos"
+        self.no_aug_epochs = 10
+        self.min_lr_ratio = 0.05
+        self.ema = True
+
+        self.weight_decay = 5e-4
+        self.momentum = 0.9
 
     def get_model(self, sublinear=False):
 

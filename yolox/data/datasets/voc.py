@@ -17,7 +17,8 @@ import numpy as np
 from yolox.evaluators.voc_eval import voc_eval
 
 from .datasets_wrapper import CacheDataset, cache_read_img
-from .voc_classes import VOC_CLASSES
+# from .voc_classes import VOC_CLASSES
+from .face_classes import VOC_CLASSES
 
 
 class AnnotationTransform(object):
@@ -101,7 +102,8 @@ class VOCDetection(CacheDataset):
     def __init__(
         self,
         data_dir,
-        image_sets=[("2007", "trainval"), ("2012", "trainval")],
+        # image_sets,
+        dataset_type,
         img_size=(416, 416),
         preproc=None,
         target_transform=AnnotationTransform(),
@@ -110,7 +112,8 @@ class VOCDetection(CacheDataset):
         cache_type="ram",
     ):
         self.root = data_dir
-        self.image_set = image_sets
+        # self.image_set = image_sets
+        self.dataset_type = dataset_type
         self.img_size = img_size
         self.preproc = preproc
         self.target_transform = target_transform
@@ -123,19 +126,19 @@ class VOCDetection(CacheDataset):
         ]
         self.class_ids = list(range(len(VOC_CLASSES)))
         self.ids = list()
-        for (year, name) in image_sets:
-            self._year = year
-            rootpath = os.path.join(self.root, "VOC" + year)
-            for line in open(
-                os.path.join(rootpath, "ImageSets", "Main", name + ".txt")
-            ):
-                self.ids.append((rootpath, line.strip()))
+        # for (year, name) in image_sets:
+    #     self._year = year
+    #     rootpath = os.path.join(self.root, "VOC" + year)
+        for line in open(
+            os.path.join(self.root, "ImageSets", "Main", self.dataset_type + ".txt")
+        ):
+            self.ids.append((self.root, line.strip()))
         self.num_imgs = len(self.ids)
 
         self.annotations = self._load_coco_annotations()
 
         path_filename = [
-            (self._imgpath % self.ids[i]).split(self.root + "/")[1]
+            (self._imgpath % self.ids[i]).split(self.root + "/")[0]
             for i in range(self.num_imgs)
         ]
         super().__init__(
@@ -166,7 +169,7 @@ class VOCDetection(CacheDataset):
         res[:, :4] *= r
         resized_info = (int(height * r), int(width * r))
 
-        return (res, img_info, resized_info)
+        return res, img_info, resized_info
 
     def load_anno(self, index):
         return self.annotations[index][0]
@@ -244,7 +247,7 @@ class VOCDetection(CacheDataset):
 
     def _get_voc_results_file_template(self):
         filename = "comp4_det_test" + "_{:s}.txt"
-        filedir = os.path.join(self.root, "results", "VOC" + self._year, "Main")
+        filedir = os.path.join(self.root, "results", "MAP")
         if not os.path.exists(filedir):
             os.makedirs(filedir)
         path = os.path.join(filedir, filename)
@@ -276,18 +279,20 @@ class VOCDetection(CacheDataset):
                         )
 
     def _do_python_eval(self, output_dir="output", iou=0.5):
-        rootpath = os.path.join(self.root, "VOC" + self._year)
-        name = self.image_set[0][1]
-        annopath = os.path.join(rootpath, "Annotations", "{:s}.xml")
-        imagesetfile = os.path.join(rootpath, "ImageSets", "Main", name + ".txt")
+        # rootpath = os.path.join(self.root, "VOC" + self._year)
+        # name = self.image_set[0][1]
+        # annopath = os.path.join(self.root, "Annotations", "{:s}.xml")
+        annopath = self.root+"\\Annotations\\"+"{:s}.xml"
+        imagesetfile = os.path.join(self.root, "ImageSets", "Main", self.dataset_type + ".txt")
         cachedir = os.path.join(
-            self.root, "annotations_cache", "VOC" + self._year, name
+            self.root, "annotations_cache", "voc", self.dataset_type
         )
         if not os.path.exists(cachedir):
             os.makedirs(cachedir)
         aps = []
         # The PASCAL VOC metric changed in 2010
-        use_07_metric = True if int(self._year) < 2010 else False
+        # use_07_metric = True if int(self._year) < 2010 else False
+        use_07_metric = False
         print("Eval IoU : {:.2f}".format(iou))
         if output_dir is not None and not os.path.isdir(output_dir):
             os.mkdir(output_dir)
